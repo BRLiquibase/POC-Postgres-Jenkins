@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset jbennett:ddl_create_table_organizations labels:release-1.0.0
+--changeset author:ddl_create_table_organizations labels:release-1.0.0
 --comment Release 1.0.0
 CREATE TABLE ORGANIZATIONS (
     ID INT PRIMARY KEY NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE ORGANIZATIONS (
 );
 --rollback DROP TABLE ORGANIZATIONS;
 
---changeset jbennett:dml_insert_organizations labels:release-1.0.0
+--changeset author:dml_insert_organizations labels:release-1.0.0
 --comment Release 1.0.0
 INSERT INTO ORGANIZATIONS (ID, NAME, INDUSTRY, EMPLOYEE_COUNT) VALUES (1, 'Acme Corporation', 'Explosives', 1);
 INSERT INTO ORGANIZATIONS (ID, NAME, INDUSTRY, EMPLOYEE_COUNT) VALUES (2, 'Initech', 'Y2K', 50);
@@ -89,7 +89,7 @@ END;
 $$ LANGUAGE plpgsql;
 --rollback DROP FUNCTION IF EXISTS get_employees_by_org(integer);
 
---changeset jbennett:dml_email_fix labels:jira-1388,release-1.0.3
+--changeset author:dml_email_fix labels:jira-1388,release-1.0.3
 --comment Release 1.0.3
 UPDATE EMPLOYEES SET EMAIL_ADDRESS = 'taylor.morgan2@example.com' WHERE ID = 1;
 --rollback UPDATE EMPLOYEES SET EMAIL_ADDRESS = 'redacted@example.com' WHERE ID = 1;
