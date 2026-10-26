@@ -1,0 +1,162 @@
+/*
+###
+### This sample pipeline is intended as a starting point for integration between Liquibase Secure (formerly Liquibase Pro) and Jenkins
+### Review and update prior to use
+###
+### Liquibase version: 5.00.0+
+###
+### Get Liquibase: https://www.liquibase.com/download-secure
+### Liquibase sales: https://www.liquibase.com/contact-us
+### Liquibase support: https://support.liquibase.com
+###
+
+###
+### Prior to running the following files must exist in repository:
+###
+### 1. liquibase.flowfile.yaml
+###    Liquibase flow file
+###    https://docs.liquibase.com/secure/user-guide-5-0/what-is-a-flow-file
+###
+### 2. liquibase.checks-settings.conf
+###    Liquibase policy checks configuration file
+###    https://docs.liquibase.com/secure/user-guide-5-0/use-checks-settings-file
+###
+### 3. changelog.main.xml
+###    Root Liquibase changelog file
+###    https://docs.liquibase.com/secure/user-guide-5-0/what-is-a-changelog
+###
+*/
+
+/*
+###
+### Jenkins documentation: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/
+###
+*/
+
+/*
+###
+### Prior to running the following Jenkins credentials (Secret text) must exist:
+### https://www.jenkins.io/doc/book/using/using-credentials/
+###
+### LIQUIBASE_DEV_URL        JDBC URL of the target database
+### LIQUIBASE_DEV_USER       Database username
+### LIQUIBASE_DEV_PASSWORD   Database password
+### LIQUIBASE_LICENSE        Liquibase Secure license key
+###
+### Pipeline parameters (LB_LABELS, LB_TEST_CHECKS, LB_TEST_DRIFT, LB_TEST_ROLLBACKS) are defined in the job config.xml
+###
+*/
+
+/*
+###
+### Run a command on either a Linux/macOS (sh) or Windows (bat) agent
+###
+*/
+def runCmd(String cmd) {
+    if (isUnix()) {
+        sh cmd
+    } else {
+        bat cmd
+    }
+}
+
+pipeline {
+/*
+###
+### Update to a specific agent label if required, e.g. agent { label 'liquibase' }
+### https://www.jenkins.io/doc/book/managing/nodes/
+###
+*/
+    agent any
+
+/*
+###
+### Set Liquibase environment variables
+###
+*/
+    environment {
+/*
+###
+### Liquibase specific
+###
+*/
+        LB_BASE_DIR = "./"
+        LB_ENVIRONMENT = "DEV"
+        LIQUIBASE_COMMAND_CHANGELOG_FILE = "changelog.main.xml"
+        LIQUIBASE_COMMAND_CHECKS_RUN_CHECKS_OUTPUT = "issues"
+        LIQUIBASE_COMMAND_CHECKS_RUN_CHECKS_SCRIPTS_ENABLED = "true"
+        LIQUIBASE_DBCLHISTORY_ENABLED = "true"
+        LIQUIBASE_LOG_FILE = "./liquibase.dev.log.json"
+        LIQUIBASE_LOG_FORMAT = "json_pretty"
+        LIQUIBASE_LOG_LEVEL = "warning"
+        LIQUIBASE_MIRROR_CONSOLE_MESSAGES_TO_LOG = "false"
+        LIQUIBASE_REPORTS_OPEN = "false"
+        LIQUIBASE_SEARCH_PATH = "./"
+        LIQUIBASE_SHOW_BANNER = "false"
+
+/*
+###
+### These values should be pulled from Jenkins credentials
+###
+*/
+        LIQUIBASE_COMMAND_URL = credentials('LIQUIBASE_DEV_URL')
+        LIQUIBASE_COMMAND_USERNAME = credentials('LIQUIBASE_DEV_USER')
+        LIQUIBASE_COMMAND_PASSWORD = credentials('LIQUIBASE_DEV_PASSWORD')
+        LIQUIBASE_LICENSE_KEY = credentials('LIQUIBASE_LICENSE')
+    }
+
+    stages {
+/*
+###
+### Run the Liquibase flowfile
+### Requires Liquibase Secure installed on the agent and "liquibase" on the PATH
+###
+*/
+        stage('Running Liquibase') {
+            steps {
+                script {
+                    runCmd("liquibase flow --flow-file=liquibase.flowfile.yaml")
+                }
+            }
+        }
+
+/*
+###
+### Alternative: run the Liquibase flowfile via Docker
+### Requires Docker installed on the agent
+### To use, comment out the stage above and uncomment this stage
+###
+        stage('Running Liquibase') {
+            steps {
+                script {
+                    def envVars = [
+                        'LB_BASE_DIR', 'LB_ENVIRONMENT', 'LB_LABELS', 'LB_TEST_CHECKS', 'LB_TEST_DRIFT', 'LB_TEST_ROLLBACKS',
+                        'LIQUIBASE_COMMAND_CHANGELOG_FILE', 'LIQUIBASE_COMMAND_CHECKS_RUN_CHECKS_OUTPUT', 'LIQUIBASE_COMMAND_CHECKS_RUN_CHECKS_SCRIPTS_ENABLED',
+                        'LIQUIBASE_DBCLHISTORY_ENABLED', 'LIQUIBASE_LOG_FILE', 'LIQUIBASE_LOG_FORMAT', 'LIQUIBASE_LOG_LEVEL',
+                        'LIQUIBASE_MIRROR_CONSOLE_MESSAGES_TO_LOG', 'LIQUIBASE_REPORTS_OPEN', 'LIQUIBASE_SEARCH_PATH', 'LIQUIBASE_SHOW_BANNER',
+                        'LIQUIBASE_COMMAND_URL', 'LIQUIBASE_COMMAND_USERNAME', 'LIQUIBASE_COMMAND_PASSWORD', 'LIQUIBASE_LICENSE_KEY'
+                    ]
+                    def envFlags = envVars.collect { "--env ${it}" }.join(' ')
+                    // On Linux/macOS, run as the Jenkins user so logs and reports can be written to the workspace
+                    def userFlags = isUnix() ? '--user "$(id -u):$(id -g)" --env HOME=/tmp' : ''
+                    runCmd("docker run --rm ${userFlags} ${envFlags} " +
+                           "-v \"${env.WORKSPACE}:/liquibase/changelog\" -w /liquibase/changelog " +
+                           "liquibase/liquibase-secure:latest flow --flow-file=liquibase.flowfile.yaml")
+                }
+            }
+        }
+*/
+    }
+
+/*
+###
+### Upload artifacts, clean workspace
+###
+*/
+    post {
+        always {
+            archiveArtifacts allowEmptyArchive: true, artifacts: '**/*.json, **/*.html'
+            deleteDir()
+        }
+    }
+}

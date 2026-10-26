@@ -1,0 +1,74 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job">
+  <actions/>
+  <description>Liquibase Secure flow pipeline</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>LB_LABELS</name>
+          <description>Label filters</description>
+          <defaultValue></defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>LB_TEST_CHECKS</name>
+          <description>Policy checks T/F</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>T</string>
+              <string>F</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>LB_TEST_DRIFT</name>
+          <description>Drift detection T/F</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>T</string>
+              <string>F</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>LB_TEST_ROLLBACKS</name>
+          <description>Test rollback scripts T/F</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>T</string>
+              <string>F</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps">
+    <scm class="hudson.plugins.git.GitSCM" plugin="git">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <!-- Update to your project repository -->
+          <url>https://github.com/YOUR_ORG/YOUR_REPO.git</url>
+          <!-- Private repositories only: Username with password credential (user + personal access token). Remove for public repositories -->
+          <credentialsId>LIQUIBASE_GIT_CREDENTIALS</credentialsId>
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <name>*/main</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions/>
+    </scm>
+    <!-- Path to the Jenkinsfile within the repository -->
+    <scriptPath>config/1_Liquibase_Flow</scriptPath>
+    <lightweight>true</lightweight>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
